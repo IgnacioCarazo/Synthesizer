@@ -20,8 +20,6 @@ function [waveforms, noteCycle, phaseIncrement] = saw(noteFreq, fs, velocity)
 % Notes:
 %   - The function limits harmonics per bank to avoid aliasing.
 %   - The note frequency is constrained to the available bank range.
-%   - This function no longer repeats cycles or appends silence; phase tracking
-%     is expected to be handled externally (e.g., by the oscillator).
 % ---------------------------------------------------------------
 
 % Central frequencies of the banks (logarithmic spacing)
