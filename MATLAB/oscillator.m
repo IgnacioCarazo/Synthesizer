@@ -14,7 +14,7 @@ function [block, newPhase] = oscillator(waveType, freq, amp, fs, initPhase, bloc
 %   block      - generated block of samples
 %   newPhase   - phase at the end of the block
 % ---------------------------------------------------------------
-
+fprintf('[%0.3f s] Entering <oscillator>\n', toc);
 % Map waveType to function handle
 switch lower(waveType)
     case 'sine'
@@ -47,5 +47,5 @@ for n = 1:blockSize
 end
 
 newPhase = phase;
-
+fprintf('[%0.3f s] Exiting <oscillator>\n', toc);
 end
