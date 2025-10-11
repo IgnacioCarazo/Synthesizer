@@ -93,7 +93,7 @@ finalWaveUnfiltered = finalWaveUnfiltered(1:writePos-1);
 
 % -------------------------------
 % Frequency-domain analysis (FFT) with stem
-% -------------------------------
+% -------------------------------wawa
 N = length(finalWaveFiltered);
 Y_filtered   = fft(finalWaveFiltered);
 Y_unfiltered = fft(finalWaveUnfiltered);

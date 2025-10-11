@@ -3,10 +3,6 @@ function [waveforms, noteCycle, phaseIncrement] = sine(noteFreq, fs, velocity)
 % Generate a single-cycle sine wave using precalculated wavetable banks
 % ---------------------------------------------------------------
 %
-% This function creates a single-cycle sine waveform for a given note frequency
-% using precomputed wavetable banks. The waveform is phase-aware and ready for
-% continuous playback.
-%
 % Inputs:
 %   noteFreq        - Frequency of the note to play (Hz)
 %   fs              - Sampling rate (Hz)
@@ -18,70 +14,43 @@ function [waveforms, noteCycle, phaseIncrement] = sine(noteFreq, fs, velocity)
 %   phaseIncrement  - Amount to increment phase per sample (for continuous playback)
 %
 % Notes:
-%   - The function limits harmonics per bank to avoid aliasing.
-%   - The note frequency is constrained to the available bank range.
+%   - Only the fundamental harmonic is needed for a sine wave.
 % ---------------------------------------------------------------
 
-% Define central frequencies for the banks (same as saw)
-banks = [20, 40, 80, 160, 320, 640, 1280, 5120];
+banks = [20, 25, 30, 35, 40, 45, 50, 56, 63, 70, 79, 88, 99, 111, 125, ...
+    140, 157, 176, 198, 222, 249, 279, 313, 352, 395, 443, 497, 558, ...
+    627, 704, 790, 886, 992, 1111, 1244, 1393, 1560, 1747, 1955, 2187, ...
+    2450, 2740, 3070, 3440, 3860, 4330, 4860, 5450, 6120, 6870, 7720, ...
+    8680, 9760, 10960, 12320, 13840, 15530, 17440, 19550, 20000];
 
-% Nyquist frequency
 fNyquist = fs / 2;
-
-% Initialize cell array to store normalized waveforms
 waveforms = cell(1, length(banks));
 
-% Generate wavetable banks (only fundamental sine for each bank)
+% Generate wavetable banks (fundamental only)
 for b = 1:length(banks)
     bankFreq = banks(b);
-
-    % Number of samples per period
     Ns = round(fs / bankFreq);
     n = 0:Ns-1;
-
-    % Only the fundamental
-    number_of_harmonics = 1;
-
-    % Ensure Nyquist is not exceeded
-    maxHarmonics = floor(fNyquist / bankFreq);
-    number_of_harmonics = min(number_of_harmonics, maxHarmonics);
-
-    % Amplitude of harmonic(s)
-    a = 1;
-
-    % Initialize waveform
-    waveform = zeros(1, Ns);
-
-    % Sum harmonics (just the fundamental)
-    for harmonic_index = 1:number_of_harmonics
-        waveform = waveform + a * sin(2*pi*harmonic_index*n/Ns);
-    end
-
-    % Normalize
-    waveform_normalized = waveform / max(abs(waveform));
-
-    % Store in cell array
-    waveforms{b} = waveform_normalized;
+    waveform = sin(2*pi*n/Ns);  % fundamental only
+    waveforms{b} = waveform / max(abs(waveform)); % normalize
 end
 
 % -------------------
-% Select closest bank
+% Select closest bank and interpolate
 % -------------------
-% Limit noteFreq to bank range to avoid out-of-range errors
 noteFreq = max(min(noteFreq, banks(end)), banks(1));
 [~, bankIndex] = min(abs(banks - noteFreq));
 bankWave = waveforms{bankIndex};
 
-% Interpolation to match exact note frequency (single cycle)
 Ns_new = round(fs / noteFreq);
-t_old = linspace(0, 1, length(bankWave));
-t_new = linspace(0, 1, Ns_new);
+t_old = linspace(0,1,length(bankWave));
+t_new = linspace(0,1,Ns_new);
 noteCycle = interp1(t_old, bankWave, t_new, 'linear');
 
 % Normalize and apply velocity
 noteCycle = velocity * (noteCycle / max(abs(noteCycle)));
 
-% Compute phase increment for continuous playback
+% Compute phase increment
 phaseIncrement = noteFreq / fs;
 
 end

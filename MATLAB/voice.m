@@ -40,19 +40,44 @@ amp  = voiceIn.note(2);
 % Update phase in output voice
 voiceOut.phase = newPhase;
 
-% Compute ADSR envelope for this block and update voice env state
-[envSeg, voiceOut] = adsr_envelope(voiceOut, nSamples, fs);
+% Envelope
+if isfield(voiceIn, 'applyEnvelope') && voiceIn.applyEnvelope
+    [envSeg, voiceOut] = adsr_envelope(voiceOut, nSamples, fs);
+    if length(oscBlock) < length(envSeg)
+        oscBlock(end+1:length(envSeg)) = 0;
+    elseif length(envSeg) < length(oscBlock)
+        envSeg(end+1:length(oscBlock)) = 0;
+    end
+    oscBlock = oscBlock .* envSeg;
+else
+    % Bypass de amplitud: ajustar ADSR a valores planos
+    voiceOut.adsr.attack  = 0;
+    voiceOut.adsr.decay   = 0;
+    voiceOut.adsr.sustain = 1;
+    voiceOut.adsr.release = 0;
 
-% Apply envelope to oscillator output
-% Ensure oscBlock is same length as envSeg
-if length(oscBlock) < length(envSeg)
-    oscBlock(end+1:length(envSeg)) = 0;
-elseif length(envSeg) < length(oscBlock)
-    envSeg(end+1:length(oscBlock)) = 0;
+    % Actualizar el envelope para control de duración
+    [~, voiceOut] = adsr_envelope(voiceOut, nSamples, fs);
+    % No se multiplica oscBlock, queda crudo
+
 end
 
-noteBlock = oscBlock .* envSeg;
+% check lengths
 
-[noteBlock, voiceOut] = filter_block(noteBlock, voiceOut);
+
+
+% --- Filter ---
+if isfield(voiceIn, 'applyFilter') && voiceIn.applyFilter
+    [filteredBlock, voiceOut.filter.state] = svf(...
+        oscBlock, ...
+        voiceOut.filter.cutoff, ...
+        voiceOut.filter.resonance, ...
+        voiceOut.filter.fs, ...
+        voiceOut.filter.state, ...
+        voiceOut.filter.type);
+    noteBlock = filteredBlock;
+else
+    noteBlock = oscBlock;
+end
 fprintf('[%0.3f s] Exiting <voice>\n', toc);
 end
