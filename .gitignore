@@ -1,52 +1,21 @@
-# ============================================
-# macOS
-# ============================================
+# ----------------------
+# Archivos de sistema y temporales
+# ----------------------
 .DS_Store
-.AppleDouble
-.LSOverride
-Icon?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
-
-# ============================================
-# MATLAB
-# ============================================
-# MATLAB code generation and cache
-slprj/
-sccprj/
-codegen/
-mex*
-*.mex*
-*.mlmex*
-
-# Simulink cache
-*.slxc
-*.slx.r20*
-
-# Simulink projects
-*.prj
-*.simproj
-*.sfx
-*.mdl.r20*
-*.slx.r20*
-
-# MATLAB crash logs
-matlab_crash_dump.*
-
-# MATLAB preferences/workspace (local)
-*.asv
-*.autosave
-*.m~  
-*.mat~ 
-*.fig~ 
-
-# ============================================
-# General backup / temp
-# ============================================
-*.bak
 *.swp
-*.tmp
+*.swo
 *.log
+*.tmp
+*.bak
+
+# ----------------------
+# VSCode
+# ----------------------
+.vscode/
+*.code-workspace
+
+# ----------------------
+# Build general 
+# ----------------------
+/build/

@@ -1,0 +1,11 @@
+# MATLAB auto-generated files
+*.mat
+*.fig
+*.asv
+*.mex*
+*.mexa64
+*.mexmaci64
+*.mexw64
+
+# Temporary folders
+/temp/
