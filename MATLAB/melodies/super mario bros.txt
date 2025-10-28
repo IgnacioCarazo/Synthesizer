@@ -1,0 +1,26 @@
+melody1 = [
+    76 0.8 0.2;   % ^E
+    76 0.8 0.2;   % ^E
+    0  0   0.05;   % slight pause
+    76 0.8 0.18;   % ^E
+    0  0   0.10;   % slight pause
+    72 0.8 0.2;   % ^C
+    76 0.8 0.2;   % ^E
+    0  0   0.05;   % slight pause
+    79 0.8 0.25;   % ^G (longer)
+    0  0   0.2;   % rest before drop
+    67 0.8 0.3;   % G (lower, longer)
+    ];
+melody2 = [
+    48 0.8 0.2;   % C (root bass)
+    48 0.8 0.2;   % C
+    0  0   0.05;   % rest
+    48 0.8 0.18;   % C
+    0  0   0.10;   % rest
+    55 0.8 0.2;   % G (fifth)
+    48 0.8 0.2;   % C
+    0  0   0.05;   % slight pause
+    55 0.8 0.25;   % G (longer)
+    0  0   0.2;   % rest before drop
+    48 0.8 0.3;   % C (close phrase)
+    ];

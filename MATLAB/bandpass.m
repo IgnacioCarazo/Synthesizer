@@ -34,13 +34,15 @@ for k = 1:size(cutoffList,1)
     alpha_lp = dt/(RC_lp + dt);
 
     bank(k).cutoff = [f_low, f_high];
+
+    % Highpass
     bank(k).b_hp = alpha_hp;
     bank(k).a_hp = alpha_hp;
     bank(k).state_hp = 0;
 
+    % Lowpass
     bank(k).b_lp = alpha_lp;
     bank(k).a_lp = 1 - alpha_lp;
     bank(k).state_lp = 0;
 end
 end
-

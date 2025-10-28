@@ -89,4 +89,11 @@ noteCycle = velocity * (noteCycle / max(abs(noteCycle)));
 % Compute phase increment for continuous playback
 phaseIncrement = noteFreq / fs;
 
+figure;
+plot(noteCycle);
+title('Single-Cycle Triangle Waveform');
+xlabel('Sample');
+ylabel('Amplitude');
+grid on;
+
 end

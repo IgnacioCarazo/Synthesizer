@@ -70,6 +70,7 @@ for i = 1:nSamples
                 env.stage = 'sustain';
                 env.stageSampleCounter = 0;
                 v = adsr.sustain;
+                env.level = v;
             else
                 decaySamples = max(1, round(adsr.decay * fs));
                 env.stageSampleCounter = env.stageSampleCounter + 1;
@@ -83,6 +84,7 @@ for i = 1:nSamples
             end
         case 'sustain'
             v = adsr.sustain;
+            env.level = v;
             % Remain in sustain until an external note-off sets stage to 'release'
         case 'release'
             if adsr.release <= 0
