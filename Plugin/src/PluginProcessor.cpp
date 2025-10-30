@@ -1,188 +1,175 @@
 #include "PluginProcessor.h"
-#include "PluginEditor.h"
+#include "GUI.h"
+
+class SynthSound : public juce::SynthesiserSound
+{
+public:
+    bool appliesToNote(int /*midiNoteNumber*/) override { return true; }
+    bool appliesToChannel(int /*midiChannel*/) override { return true; }
+};
 
 //==============================================================================
+// CONSTRUCTOR
 AudioPluginAudioProcessor::AudioPluginAudioProcessor()
-     : AudioProcessor (BusesProperties()
-                     #if ! JucePlugin_IsMidiEffect
-                      #if ! JucePlugin_IsSynth
-                       .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
-                      #endif
-                       .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
-                     #endif
-                       )
+    : AudioProcessor(BusesProperties()
+#if !JucePlugin_IsMidiEffect
+#if !JucePlugin_IsSynth
+                         .withInput("Input", juce::AudioChannelSet::stereo(), true)
+#endif
+                         .withOutput("Output", juce::AudioChannelSet::stereo(), true)
+#endif
+                         ),
+      apvts(*this, nullptr, "PARAMETERS", createParameterLayout())
 {
+    synth.clearVoices();
+    synth.addVoice(new SynthVoice());
+
+    synth.clearSounds();
+    synth.addSound(new SynthSound());
 }
 
-AudioPluginAudioProcessor::~AudioPluginAudioProcessor()
+AudioPluginAudioProcessor::~AudioPluginAudioProcessor() {}
+
+//==============================================================================
+// PREPARACIÓN DE AUDIO
+void AudioPluginAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
+    synth.setCurrentPlaybackSampleRate(sampleRate);
 }
 
 //==============================================================================
-const juce::String AudioPluginAudioProcessor::getName() const
-{
-    return JucePlugin_Name;
-}
-
-bool AudioPluginAudioProcessor::acceptsMidi() const
-{
-   #if JucePlugin_WantsMidiInput
-    return true;
-   #else
-    return false;
-   #endif
-}
-
-bool AudioPluginAudioProcessor::producesMidi() const
-{
-   #if JucePlugin_ProducesMidiOutput
-    return true;
-   #else
-    return false;
-   #endif
-}
-
-bool AudioPluginAudioProcessor::isMidiEffect() const
-{
-   #if JucePlugin_IsMidiEffect
-    return true;
-   #else
-    return false;
-   #endif
-}
-
-double AudioPluginAudioProcessor::getTailLengthSeconds() const
-{
-    return 0.0;
-}
-
-int AudioPluginAudioProcessor::getNumPrograms()
-{
-    return 1;   // NB: some hosts don't cope very well if you tell them there are 0 programs,
-                // so this should be at least 1, even if you're not really implementing programs.
-}
-
-int AudioPluginAudioProcessor::getCurrentProgram()
-{
-    return 0;
-}
-
-void AudioPluginAudioProcessor::setCurrentProgram (int index)
-{
-    juce::ignoreUnused (index);
-}
-
-const juce::String AudioPluginAudioProcessor::getProgramName (int index)
-{
-    juce::ignoreUnused (index);
-    return {};
-}
-
-void AudioPluginAudioProcessor::changeProgramName (int index, const juce::String& newName)
-{
-    juce::ignoreUnused (index, newName);
-}
-
-//==============================================================================
-void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
-{
-    // Use this method as the place to do any pre-playback
-    // initialisation that you need..
-    juce::ignoreUnused (sampleRate, samplesPerBlock);
-}
-
+// LIBERAR RECURSOS
 void AudioPluginAudioProcessor::releaseResources()
 {
-    // When playback stops, you can use this as an opportunity to free up any
-    // spare memory, etc.
+    // Aquí se pueden limpiar buffers si se desea
 }
 
-bool AudioPluginAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
+//==============================================================================
+// PROCESAMIENTO DE AUDIO Y MIDI
+void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
+                                             juce::MidiBuffer &midiMessages)
 {
-  #if JucePlugin_IsMidiEffect
-    juce::ignoreUnused (layouts);
+    juce::ScopedNoDenormals noDenormals;
+    buffer.clear();
+
+    juce::MidiBuffer combinedMidi;
+    combinedMidi.addEvents(midiMessages, 0, buffer.getNumSamples(), 0);
+    keyboardState.processNextMidiBuffer(combinedMidi, 0, buffer.getNumSamples(), true);
+
+    updateVoicesParameters(); // aplica cambios de GUI en tiempo real
+    synth.renderNextBlock(buffer, combinedMidi, 0, buffer.getNumSamples());
+}
+
+//==============================================================================
+// OTROS MÉTODOS MANTENIDOS
+bool AudioPluginAudioProcessor::isBusesLayoutSupported(const BusesLayout &layouts) const
+{
+#if JucePlugin_IsMidiEffect
+    juce::ignoreUnused(layouts);
     return true;
-  #else
-    // This is the place where you check if the layout is supported.
-    // In this template code we only support mono or stereo.
-    // Some plugin hosts, such as certain GarageBand versions, will only
-    // load plugins that support stereo bus layouts.
-    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono()
-     && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
+#else
+    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono() &&
+        layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
         return false;
 
-    // This checks if the input layout matches the output layout
-   #if ! JucePlugin_IsSynth
+#if !JucePlugin_IsSynth
     if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
         return false;
-   #endif
+#endif
 
     return true;
-  #endif
-}
-
-void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
-                                              juce::MidiBuffer& midiMessages)
-{
-    juce::ignoreUnused (midiMessages);
-
-    juce::ScopedNoDenormals noDenormals;
-    auto totalNumInputChannels  = getTotalNumInputChannels();
-    auto totalNumOutputChannels = getTotalNumOutputChannels();
-
-    // In case we have more outputs than inputs, this code clears any output
-    // channels that didn't contain input data, (because these aren't
-    // guaranteed to be empty - they may contain garbage).
-    // This is here to avoid people getting screaming feedback
-    // when they first compile a plugin, but obviously you don't need to keep
-    // this code if your algorithm always overwrites all the output channels.
-    for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-        buffer.clear (i, 0, buffer.getNumSamples());
-
-    // This is the place where you'd normally do the guts of your plugin's
-    // audio processing...
-    // Make sure to reset the state if your inner loop is processing
-    // the samples and the outer loop is handling the channels.
-    // Alternatively, you can process the samples with the channels
-    // interleaved by keeping the same state.
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
-    {
-        auto* channelData = buffer.getWritePointer (channel);
-        juce::ignoreUnused (channelData);
-        // ..do something to the data...
-    }
+#endif
 }
 
 //==============================================================================
-bool AudioPluginAudioProcessor::hasEditor() const
+// GUI
+bool AudioPluginAudioProcessor::hasEditor() const { return true; }
+juce::AudioProcessorEditor *AudioPluginAudioProcessor::createEditor()
 {
-    return true; // (change this to false if you choose to not supply an editor)
-}
-
-juce::AudioProcessorEditor* AudioPluginAudioProcessor::createEditor()
-{
-    return new AudioPluginAudioProcessorEditor (*this);
+    return new GUI(*this);
 }
 
 //==============================================================================
-void AudioPluginAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
+// MÉTODOS REQUERIDOS POR JUCE
+int AudioPluginAudioProcessor::getNumPrograms() { return 1; }
+int AudioPluginAudioProcessor::getCurrentProgram() { return 0; }
+void AudioPluginAudioProcessor::setCurrentProgram(int) {}
+const juce::String AudioPluginAudioProcessor::getProgramName(int) { return {}; }
+void AudioPluginAudioProcessor::changeProgramName(int, const juce::String &) {}
+
+const juce::String AudioPluginAudioProcessor::getName() const { return JucePlugin_Name; }
+bool AudioPluginAudioProcessor::acceptsMidi() const
 {
-    // You should use this method to store your parameters in the memory block.
-    // You could do that either as raw data, or use the XML or ValueTree classes
-    // as intermediaries to make it easy to save and load complex data.
-    juce::ignoreUnused (destData);
+#if JucePlugin_WantsMidiInput
+    return true;
+#else
+    return false;
+#endif
+}
+bool AudioPluginAudioProcessor::producesMidi() const
+{
+#if JucePlugin_ProducesMidiOutput
+    return true;
+#else
+    return false;
+#endif
+}
+bool AudioPluginAudioProcessor::isMidiEffect() const
+{
+#if JucePlugin_IsMidiEffect
+    return true;
+#else
+    return false;
+#endif
+}
+double AudioPluginAudioProcessor::getTailLengthSeconds() const { return 0.0; }
+
+//==============================================================================
+// STATE MGMT
+void AudioPluginAudioProcessor::getStateInformation(juce::MemoryBlock &destData)
+{
+    juce::ignoreUnused(destData);
 }
 
-void AudioPluginAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
+void AudioPluginAudioProcessor::setStateInformation(const void *data, int sizeInBytes)
 {
-    // You should use this method to restore your parameters from this memory block,
-    // whose contents will have been created by the getStateInformation() call.
-    juce::ignoreUnused (data, sizeInBytes);
+    juce::ignoreUnused(data, sizeInBytes);
 }
 
 //==============================================================================
-// This creates new instances of the plugin..
-juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
+// FACTORY
+juce::AudioProcessor *JUCE_CALLTYPE createPluginFilter()
 {
     return new AudioPluginAudioProcessor();
+}
+
+//==============================================================================
+// PARAMETER SETUP
+juce::AudioProcessorValueTreeState::ParameterLayout AudioPluginAudioProcessor::createParameterLayout()
+{
+    std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
+
+    params.push_back(std::make_unique<juce::AudioParameterChoice>(
+        "WAVE", "Wave Type",
+        juce::StringArray{"Sine", "Saw", "Square", "Triangle"}, 0));
+
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "VELOCITY", "Velocity", 0.0f, 1.0f, 1.0f));
+
+    return {params.begin(), params.end()};
+}
+
+void AudioPluginAudioProcessor::updateVoicesParameters()
+{
+    int waveIndex = static_cast<int>(*apvts.getRawParameterValue("WAVE"));
+    float velocity = *apvts.getRawParameterValue("VELOCITY");
+
+    for (int i = 0; i < synth.getNumVoices(); ++i)
+    {
+        if (auto voice = dynamic_cast<SynthVoice *>(synth.getVoice(i)))
+        {
+            voice->setWaveType(waveIndex);
+            voice->setAmplitude(velocity);
+        }
+    }
 }
