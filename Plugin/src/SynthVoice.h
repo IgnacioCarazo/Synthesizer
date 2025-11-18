@@ -2,6 +2,7 @@
 #include <JuceHeader.h>
 #include "Oscillator/OscillatorWrapper.h"
 #include "Oscillator/Oscillator.h"
+#include "Envelope.h"
 
 /**
  * @class SynthVoice
@@ -87,9 +88,20 @@ public:
      */
     void setAmplitude(float amp); // cambia volumen desde GUI o plugin processor
 
+    /**
+     * @brief Updates ADSR parameters for the envelope.
+     *
+     * Called by the processor when GUI parameters change.
+     */
+    void setEnvelopeParameters(float attack, float decay,
+                               float sustain, float release);
+
 private:
     /** @brief Main oscillator used for waveform generation. */
     OscillatorWrapper oscillator;
+
+    /** @brief Main oscillator used for waveform generation. */
+    Envelope env;
 
     /** @brief Current waveform index. */
     int currentWaveIndex = 0;

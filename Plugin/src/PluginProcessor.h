@@ -34,14 +34,18 @@ public:
 
     void getStateInformation(juce::MemoryBlock &destData) override;
     void setStateInformation(const void *data, int sizeInBytes) override;
-    void updateVoicesParameters(); // aplica parámetros actuales de apvts a todas las voces
 
+    /** @brief Aplica parámetros actuales del APVTS a todas las voces. */
+    void updateVoicesParameters();
+
+    /** Exposición pública del APVTS para attachments en la GUI */
     juce::AudioProcessorValueTreeState apvts;
 
     // Exponer el estado del teclado a la GUI
     juce::MidiKeyboardState &getKeyboardState() { return keyboardState; }
 
 private:
+    /** @brief Construye el layout de parámetros del APVTS. */
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
     juce::Synthesiser synth;

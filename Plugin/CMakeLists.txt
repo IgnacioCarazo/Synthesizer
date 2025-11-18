@@ -23,6 +23,8 @@ set(SourceFiles
     src/GUI.h
     src/SynthVoice.cpp
     src/SynthVoice.h
+    src/Envelope.cpp
+    src/Envelope.h
     src/Oscillator/Oscillator.cpp
     src/Oscillator/Oscillator.h
     src/Oscillator/OscillatorWrapper.cpp

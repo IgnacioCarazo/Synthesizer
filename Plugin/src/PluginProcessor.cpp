@@ -34,7 +34,18 @@ AudioPluginAudioProcessor::~AudioPluginAudioProcessor() {}
 // PREPARACIÓN DE AUDIO
 void AudioPluginAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
+    juce::ignoreUnused(samplesPerBlock);
     synth.setCurrentPlaybackSampleRate(sampleRate);
+
+    // Propagar sampleRate a voces si es necesario (las voces en su constructor pueden usar este valor)
+    for (int i = 0; i < synth.getNumVoices(); ++i)
+    {
+        if (auto *v = dynamic_cast<SynthVoice *>(synth.getVoice(i)))
+        {
+            // Si en el futuro hace falta pasar sampleRate explícitamente se haría aquí
+            juce::ignoreUnused(v);
+        }
+    }
 }
 
 //==============================================================================
@@ -149,6 +160,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout AudioPluginAudioProcessor::c
 {
     std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
 
+    // Oscillator / UI
     params.push_back(std::make_unique<juce::AudioParameterChoice>(
         "WAVE", "Wave Type",
         juce::StringArray{"Sine", "Saw", "Square", "Triangle"}, 0));
@@ -156,13 +168,34 @@ juce::AudioProcessorValueTreeState::ParameterLayout AudioPluginAudioProcessor::c
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         "VELOCITY", "Velocity", 0.0f, 1.0f, 1.0f));
 
+    // ADSR parameters (attack, decay in seconds; sustain 0..1; release seconds)
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "ATTACK", "Attack", juce::NormalisableRange<float>(0.001f, 5.0f, 0.001f), 0.01f));
+
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "DECAY", "Decay", juce::NormalisableRange<float>(0.001f, 5.0f, 0.001f), 0.10f));
+
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "SUSTAIN", "Sustain", juce::NormalisableRange<float>(0.0f, 1.0f, 0.001f), 0.80f));
+
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "RELEASE", "Release", juce::NormalisableRange<float>(0.001f, 10.0f, 0.001f), 0.20f));
+
     return {params.begin(), params.end()};
 }
 
+//==============================================================================
+// PROPAGACIÓN DE PARÁMETROS A LAS VOCES
 void AudioPluginAudioProcessor::updateVoicesParameters()
 {
     int waveIndex = static_cast<int>(*apvts.getRawParameterValue("WAVE"));
     float velocity = *apvts.getRawParameterValue("VELOCITY");
+
+    // Leer ADSR
+    float attack = *apvts.getRawParameterValue("ATTACK");
+    float decay = *apvts.getRawParameterValue("DECAY");
+    float sustain = *apvts.getRawParameterValue("SUSTAIN");
+    float release = *apvts.getRawParameterValue("RELEASE");
 
     for (int i = 0; i < synth.getNumVoices(); ++i)
     {
@@ -170,6 +203,9 @@ void AudioPluginAudioProcessor::updateVoicesParameters()
         {
             voice->setWaveType(waveIndex);
             voice->setAmplitude(velocity);
+
+            // Propagar parámetros ADSR a cada voz
+            voice->setEnvelopeParameters(attack, decay, sustain, release);
         }
     }
 }
