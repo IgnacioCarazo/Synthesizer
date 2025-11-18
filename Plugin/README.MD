@@ -27,3 +27,6 @@ cd build
 cmake ..
 cmake --build . --config Debug
 ```
+After building, you should look for the plugin inside the folder:
+
+build/TEC-Synthesizer_artefacts/Debug/Standalone
