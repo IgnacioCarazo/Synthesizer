@@ -22,7 +22,8 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
       apvts(*this, nullptr, "PARAMETERS", createParameterLayout())
 {
     synth.clearVoices();
-    synth.addVoice(new SynthVoice());
+    for (int i = 0; i < 8; ++i) // 8 voces = polifonía estándar
+        synth.addVoice(new SynthVoice());
 
     synth.clearSounds();
     synth.addSound(new SynthSound());
@@ -43,7 +44,7 @@ void AudioPluginAudioProcessor::prepareToPlay(double sampleRate, int samplesPerB
         if (auto *v = dynamic_cast<SynthVoice *>(synth.getVoice(i)))
         {
             // Si en el futuro hace falta pasar sampleRate explícitamente se haría aquí
-            juce::ignoreUnused(v);
+            v->prepare(sampleRate);
         }
     }
 }
@@ -180,7 +181,14 @@ juce::AudioProcessorValueTreeState::ParameterLayout AudioPluginAudioProcessor::c
 
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         "RELEASE", "Release", juce::NormalisableRange<float>(0.001f, 10.0f, 0.001f), 0.20f));
+    // Filtro: tipo y cutoff
+    params.push_back(std::make_unique<juce::AudioParameterChoice>(
+        "FILTER_TYPE", "Filter Type",
+        juce::StringArray{"Lowpass", "Highpass", "Bandpass"}, 0));
 
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "FILTER_CUTOFF", "Filter Cutoff",
+        juce::NormalisableRange<float>(20.0f, 20000.0f, 1.0f, 0.5f), 1000.0f));
     return {params.begin(), params.end()};
 }
 
@@ -188,24 +196,36 @@ juce::AudioProcessorValueTreeState::ParameterLayout AudioPluginAudioProcessor::c
 // PROPAGACIÓN DE PARÁMETROS A LAS VOCES
 void AudioPluginAudioProcessor::updateVoicesParameters()
 {
+    // Leer parámetros de oscilador
     int waveIndex = static_cast<int>(*apvts.getRawParameterValue("WAVE"));
     float velocity = *apvts.getRawParameterValue("VELOCITY");
 
-    // Leer ADSR
+    // Leer parámetros ADSR
     float attack = *apvts.getRawParameterValue("ATTACK");
     float decay = *apvts.getRawParameterValue("DECAY");
     float sustain = *apvts.getRawParameterValue("SUSTAIN");
     float release = *apvts.getRawParameterValue("RELEASE");
 
+    // Leer parámetros del filtro
+    int filterTypeIndex = static_cast<int>(*apvts.getRawParameterValue("FILTER_TYPE"));
+    juce::String filterTypeStr = filterTypeIndex == 0 ? "lowpass" : filterTypeIndex == 1 ? "highpass"
+                                                                                         : "bandpass";
+    float filterCutoff = *apvts.getRawParameterValue("FILTER_CUTOFF");
+
+    // Propagar parámetros a todas las voces activas
     for (int i = 0; i < synth.getNumVoices(); ++i)
     {
         if (auto voice = dynamic_cast<SynthVoice *>(synth.getVoice(i)))
         {
+            // Oscillator
             voice->setWaveType(waveIndex);
             voice->setAmplitude(velocity);
 
-            // Propagar parámetros ADSR a cada voz
+            // ADSR
             voice->setEnvelopeParameters(attack, decay, sustain, release);
+
+            // Filtro
+            voice->setFilterParameters(filterCutoff, filterTypeStr);
         }
     }
 }

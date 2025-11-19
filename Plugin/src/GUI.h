@@ -88,6 +88,17 @@ private:
     juce::Label sustainLabel;
     juce::Label releaseLabel;
 
+    // FILTER UI
+    juce::Slider filterCutoffSlider;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> filterCutoffAttachment;
+
+    juce::ComboBox filterTypeSelector;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> filterTypeAttachment;
+
+    // Labels
+    juce::Label filterCutoffLabel;
+    juce::Label filterTypeLabel;
+
     /** @brief On-screen MIDI keyboard for manual note triggering. */
     juce::MidiKeyboardComponent keyboardComponent;
 

@@ -92,6 +92,33 @@ GUI::GUI(AudioPluginAudioProcessor &p)
     releaseLabel.setJustificationType(juce::Justification::centredLeft);
     addAndMakeVisible(releaseLabel);
 
+    // Filter type selector
+    filterTypeSelector.addItem("Lowpass", 1);
+    filterTypeSelector.addItem("Highpass", 2);
+    filterTypeSelector.addItem("Bandpass", 3);
+    addAndMakeVisible(filterTypeSelector);
+    filterTypeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
+        audioProcessor.apvts, "FILTER_TYPE", filterTypeSelector);
+
+    filterTypeLabel.setText("Filter Type", juce::dontSendNotification);
+    filterTypeLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    filterTypeLabel.setJustificationType(juce::Justification::centredLeft);
+    addAndMakeVisible(filterTypeLabel);
+
+    // Filter cutoff slider
+    filterCutoffSlider.setSliderStyle(juce::Slider::LinearHorizontal);
+    filterCutoffSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 60, 20);
+    filterCutoffSlider.setRange(20.0, 20000.0, 1.0);
+    addAndMakeVisible(filterCutoffSlider);
+
+    filterCutoffAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        audioProcessor.apvts, "FILTER_CUTOFF", filterCutoffSlider);
+
+    filterCutoffLabel.setText("Cutoff", juce::dontSendNotification);
+    filterCutoffLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    filterCutoffLabel.setJustificationType(juce::Justification::centredLeft);
+    addAndMakeVisible(filterCutoffLabel);
+
     // MIDI Keyboard
 
     addAndMakeVisible(keyboardComponent);
@@ -177,6 +204,16 @@ void GUI::resized()
     releaseLabel.setBounds(envContent.removeFromTop(18));
     releaseSlider.setBounds(envContent.removeFromTop(sliderHeight).reduced(0, 2));
 
+    // filter Layout
+    auto filterContent = filterArea.reduced(20, 10);
+    filterContent.removeFromTop(topPadding);
+
+    filterTypeLabel.setBounds(filterContent.removeFromTop(18));
+    filterTypeSelector.setBounds(filterContent.removeFromTop(28).reduced(0, 2));
+    filterContent.removeFromTop(sliderGap);
+
+    filterCutoffLabel.setBounds(filterContent.removeFromTop(18));
+    filterCutoffSlider.setBounds(filterContent.removeFromTop(28).reduced(0, 2));
     //  MIDI keyboard
     keyboardComponent.setBounds(keyboardArea);
 }

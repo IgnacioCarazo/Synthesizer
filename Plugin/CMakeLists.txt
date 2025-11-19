@@ -25,6 +25,10 @@ set(SourceFiles
     src/SynthVoice.h
     src/Envelope.cpp
     src/Envelope.h
+    src/Filter/RCFilter.cpp
+    src/Filter/RCFilter.h
+    src/Filter/VoiceFilter.cpp
+    src/Filter/VoiceFilter.h
     src/Oscillator/Oscillator.cpp
     src/Oscillator/Oscillator.h
     src/Oscillator/OscillatorWrapper.cpp

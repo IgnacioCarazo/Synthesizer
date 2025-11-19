@@ -2,6 +2,7 @@
 #include <JuceHeader.h>
 #include "Oscillator/OscillatorWrapper.h"
 #include "Oscillator/Oscillator.h"
+#include "Filter/VoiceFilter.h"
 #include "Envelope.h"
 
 /**
@@ -27,6 +28,17 @@ public:
     SynthVoice();
 
     /**
+     * @brief Prepares the voice using the current system sample rate.
+     *
+     * This must be called from PluginProcessor::prepareToPlay for **each voice**,
+     * because the synth is now polyphonic and each voice must keep its own
+     * internal oscillator / envelope / filter time constants.
+     *
+     * @param sampleRate Global host sample rate (e.g., 44100, 48000).
+     */
+    void prepare(double sampleRate);
+
+    /**
      * @brief Determines whether this voice can play a given sound.
      * @param sound Pointer to a juce::SynthesiserSound object.
      * @return true if the sound is compatible with this voice.
@@ -45,6 +57,7 @@ public:
      */
     void startNote(int midiNoteNumber, float velocity,
                    juce::SynthesiserSound *sound, int currentPitchWheelPosition) override;
+
     /**
      * @brief Stops playback of the active note.
      * @param velocity Note-off velocity (unused).
@@ -80,13 +93,13 @@ public:
      * @brief Sets the waveform type used by the oscillator.
      * @param waveIndex Waveform index (e.g., 0 = sine, 1 = square, etc.).
      */
-    void setWaveType(int waveIndex); // cambia tipo de onda desde GUI
+    void setWaveType(int waveIndex);
 
     /**
      * @brief Sets the amplitude (volume) of the voice.
      * @param amp New amplitude value (normalized 0.0–1.0).
      */
-    void setAmplitude(float amp); // cambia volumen desde GUI o plugin processor
+    void setAmplitude(float amp);
 
     /**
      * @brief Updates ADSR parameters for the envelope.
@@ -96,12 +109,22 @@ public:
     void setEnvelopeParameters(float attack, float decay,
                                float sustain, float release);
 
+    /**
+     * @brief Updates filter parameters for the voice filter.
+     * @param cutoff Cutoff frequency in Hz.
+     * @param type Filter type as a string (e.g., "lowpass", "highpass").
+     */
+    void setFilterParameters(float cutoff, const juce::String &type);
+
 private:
     /** @brief Main oscillator used for waveform generation. */
     OscillatorWrapper oscillator;
 
-    /** @brief Main oscillator used for waveform generation. */
+    /** @brief Envelope ADSR. */
     Envelope env;
+
+    /** @brief Per-voice filter. */
+    VoiceFilter voiceFilter;
 
     /** @brief Current waveform index. */
     int currentWaveIndex = 0;
