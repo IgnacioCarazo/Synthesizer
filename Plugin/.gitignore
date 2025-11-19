@@ -32,3 +32,6 @@ Makefile
 # OS-specific
 .DS_Store
 Thumbs.db
+
+/build/
+/build-release/
